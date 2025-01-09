@@ -33,7 +33,7 @@ jobs:
       - id: step01
         run: echo "skipDeploy=${{ env.SKIP_DEPLOY }}" >> $GITHUB_OUTPUT
 
-  simple_deployment_pipeline:
+  test_and_build:
     runs-on: ${{ vars.RUNNER }}
     steps:
       - uses: actions/checkout@v4
@@ -61,7 +61,7 @@ jobs:
         run: npm run build
 
   bump_version_tag:
-    needs: [set-env, simple_deployment_pipeline]
+    needs: [set-env, test_and_build]
     # If we're not deploying (and saying so from a commit message),
     # we presumably aren't pushing a new version yet either, so no
     # point in tagging
@@ -78,3 +78,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEFAULT_BUMP: patch
+
+  deploy_to_render:
+    # probably not particularly necessary to have the tagging
+    # succeed, but it's nice to have the repo in a "consistent"
+    # state before deployment
+    needs: [set-env, test_and_build, bump_version_tag]
+    if: ${{ success() && (needs.set-env.outputs.skipDeploy == 'false') }}
+    runs-on: ${{ vars.RUNNER }}
+    steps:
+      - name: Deploy to Render
+        env:
+          deploy_url: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: curl "$deploy_url"
