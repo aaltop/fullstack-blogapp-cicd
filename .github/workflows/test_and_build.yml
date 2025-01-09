@@ -40,7 +40,7 @@ jobs:
         with:
           node-version: ${{ vars.NODE_VERSION }}
       - name: Install dependencies 
-        run: npm install
+        run: npm run 'install:all'
       - name: Run unit tests
         run: npm run test
       - name: Build
