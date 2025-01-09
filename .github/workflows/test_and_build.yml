@@ -1,0 +1,79 @@
+name: Test and build -pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+
+env:
+    SKIP_DEPLOY: ${{ github.event_name != 'push' || contains(join(github.event.commits.*.message), '#skip') }}
+    # should naturally not need the production URL here
+    TEST_MONGODB_URL: ${{ secrets.TEST_MONGODB_URL }}
+    TOKEN_SECRET: ${{ secrets.TOKEN_SECRET }}
+
+jobs:
+  # this is seemingly required because the env variables cannot be used
+  # in the top-level if conditionals. The original suggested approach
+  # was to use github.env, but this does not seem to be magically
+  # filled with the "env" from here, as the suggestion would seem to
+  # imply. (Also nothing very clear as to how to configure github.env anyway
+  # in the documentation.)
+  set-env:
+    runs-on: ${{ vars.RUNNER }}
+    outputs:
+      skipDeploy: ${{ steps.step01.outputs.skipDeploy }}
+    steps:
+      - id: step01
+        run: echo "skipDeploy=${{ env.SKIP_DEPLOY }}" >> $GITHUB_OUTPUT
+
+  simple_deployment_pipeline:
+    runs-on: ${{ vars.RUNNER }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ vars.NODE_VERSION }}
+      - name: Install dependencies 
+        run: npm install
+      - name: Run unit tests
+        run: npm run test
+      - name: Build
+        run: npm run build
+        # Playwright End-To-End tests
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+      - name: Run Playwright End-To-End tests
+        run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
+      - name: Build
+        run: npm run build
+
+  bump_version_tag:
+    needs: [set-env, simple_deployment_pipeline]
+    # If we're not deploying (and saying so from a commit message),
+    # we presumably aren't pushing a new version yet either, so no
+    # point in tagging
+    if: ${{ success() && (needs.set-env.outputs.skipDeploy == 'false') }}
+    runs-on: ${{ vars.RUNNER }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: '0'
+      - name: Bump version tag
+        uses: anothrNick/github-tag-action@1.71.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEFAULT_BUMP: patch

@@ -10,6 +10,9 @@
 !*.tsx
 !tsconfig*
 
+!.github
+!*.yml
+
 # vs code rest client
 !*.rest
 
