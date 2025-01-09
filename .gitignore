@@ -24,3 +24,5 @@ dist
 
 # ESlint
 !*eslint.config*
+
+playwright-report
