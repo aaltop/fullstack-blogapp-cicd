@@ -16,6 +16,7 @@ env:
     # should naturally not need the production URL here
     TEST_MONGODB_URL: ${{ secrets.TEST_MONGODB_URL }}
     TOKEN_SECRET: ${{ secrets.TOKEN_SECRET }}
+    PORT: ${{ vars.PORT }}
 
 jobs:
   # this is seemingly required because the env variables cannot be used
