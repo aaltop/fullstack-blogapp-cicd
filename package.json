@@ -3,13 +3,16 @@
     "version": "0.0.0",
     "main": "index.js",
     "scripts": {
-        "test": "cross-env NODE_ENV=test node --test --test-concurrency=1 && npm run frontend:test",
+        "backend:test": "cross-env NODE_ENV=test node --test --test-concurrency=1",
+        "test": "npm run backend:test && npm run frontend:test",
         "start": "cross-env NODE_ENV=production node index.js",
         "dev": "cross-env NODE_ENV=development nodemon index.js",
         "start:test": "cross-env NODE_ENV=test node index.js",
         "frontend:build": "cd frontend && npm run build && cd ..",
         "frontend:test": "cd frontend && npm run test && cd ..",
-        "build": "npm run frontend:build"
+        "build": "npm run frontend:build",
+        "e2e": "playwright test --project chromium --reporter=line --workers=1",
+        "e2e:report": "playwright show-report"
     },
     "dependencies": {
         "bcryptjs": "^2.4.3",
@@ -22,6 +25,7 @@
         "morgan": "^1.10.0"
     },
     "devDependencies": {
+        "@playwright/test": "^1.49.1",
         "nodemon": "^3.1.4",
         "supertest": "^7.0.0"
     }
